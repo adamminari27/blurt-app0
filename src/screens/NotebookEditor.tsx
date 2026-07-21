@@ -111,10 +111,12 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
         onRightStateChange={setRightPane}
         left={null}
         middle={
-          <main className="blurt-split-pane flex flex-col md:flex-row h-full overflow-y-auto md:overflow-hidden">
+          <main className="blurt-split-pane flex flex-col md:flex-row flex-1 min-h-0 overflow-y-auto md:overflow-hidden">
             <div
-              className={`blurt-source-pane surface m-2 overflow-hidden flex flex-col min-w-0 min-h-0 ${
-                sourcePaneCollapsed ? 'flex-none h-12 md:h-auto md:w-14' : 'flex-1 min-h-[240px] md:min-h-0'
+              className={`blurt-source-pane surface m-2 overflow-hidden flex flex-col min-w-0 ${
+                sourcePaneCollapsed
+                  ? 'flex-[0_0_48px] md:flex-none md:h-auto md:w-14'
+                  : 'flex-[1_1_0%] min-h-0 md:min-h-0'
               }`}
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
@@ -225,8 +227,10 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
               )}
             </div>
             <div
-              className={`blurt-notebook-pane surface m-2 overflow-hidden flex flex-col min-w-0 min-h-0 ${
-                notebookPaneCollapsed ? 'flex-none h-12 md:h-auto md:w-14' : 'flex-1 min-h-[240px] md:min-h-0'
+              className={`blurt-notebook-pane surface m-2 overflow-hidden flex flex-col min-w-0 ${
+                notebookPaneCollapsed
+                  ? 'flex-[0_0_48px] md:flex-none md:h-auto md:w-14'
+                  : 'flex-[1_1_0%] min-h-0 md:min-h-0'
               }`}
             >
               <div className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: 'var(--border-soft)' }}>
