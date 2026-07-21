@@ -111,9 +111,9 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
         onRightStateChange={setRightPane}
         left={null}
         middle={
-          <main className="blurt-split-pane flex flex-col md:flex-row flex-1 min-h-0 overflow-y-auto md:overflow-hidden">
+          <main className="blurt-split-pane flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
             <div
-              className={`blurt-source-pane surface m-2 overflow-hidden flex flex-col min-w-0 ${
+              className={`blurt-source-pane surface m-2 overflow-hidden flex flex-col min-w-0 min-h-0 ${
                 sourcePaneCollapsed
                   ? 'flex-[0_0_48px] md:flex-none md:h-auto md:w-14'
                   : 'flex-[1_1_0%] min-h-0 md:min-h-0'
@@ -123,7 +123,7 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
               onDrop={onDrop}
               style={dragOver ? { borderColor: 'var(--accent)' } : undefined}
             >
-              <div className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: 'var(--border-soft)' }}>
+              <div className="flex items-center justify-between px-4 py-2.5 border-b shrink-0" style={{ borderColor: 'var(--border-soft)' }}>
                 {!sourcePaneCollapsed && (
                   <div className="relative flex items-center gap-1.5 min-w-0 flex-1">
                     {activeSource ? (
@@ -214,9 +214,11 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
               </div>
               {!sourcePaneCollapsed && (
                 activeSource ? (
-                  <SourceViewer source={activeSource} />
+                  <div className="flex-1 min-h-0 overflow-y-auto">
+                    <SourceViewer source={activeSource} />
+                  </div>
                 ) : (
-                  <div className="flex-1 flex items-center justify-center p-6 text-center">
+                  <div className="flex-1 min-h-0 overflow-y-auto flex items-center justify-center p-6 text-center">
                     <div>
                       <Layers size={28} className="mx-auto mb-2" style={{ color: 'var(--text-3)' }} />
                       <p className="text-sm mb-1" style={{ color: 'var(--text-2)' }}>Select a source or drop a file here</p>
@@ -227,13 +229,13 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
               )}
             </div>
             <div
-              className={`blurt-notebook-pane surface m-2 overflow-hidden flex flex-col min-w-0 ${
+              className={`blurt-notebook-pane surface m-2 overflow-hidden flex flex-col min-w-0 min-h-0 ${
                 notebookPaneCollapsed
                   ? 'flex-[0_0_48px] md:flex-none md:h-auto md:w-14'
                   : 'flex-[1_1_0%] min-h-0 md:min-h-0'
               }`}
             >
-              <div className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: 'var(--border-soft)' }}>
+              <div className="flex items-center justify-between px-4 py-2.5 border-b shrink-0" style={{ borderColor: 'var(--border-soft)' }}>
                 {!notebookPaneCollapsed && (
                   <div className="relative flex items-center gap-1.5 min-w-0 flex-1">
                     {activePage ? (
@@ -331,7 +333,7 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
                 </div>
               </div>
               {!notebookPaneCollapsed && (
-                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
                   {activePage ? (
                     activePage.templates.length === 0 ? (
                       <div className="text-center py-12">
