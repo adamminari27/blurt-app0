@@ -9,7 +9,7 @@ import { SmartMathInput } from '../components/SmartMathInput';
 import type { SessionMode } from '../engine/ntd';
 import { getScoringMode, type ScoringMode } from '../hooks/useScoringMode';
 import { ArrowLeft, ChevronRight, Trophy, Target, Eye, Check } from 'lucide-react';
-
+import { DonateFooter } from './Footer';
 interface Props {
   notebookId: string;
   itemCount: number;
