@@ -8,8 +8,8 @@ import { SourceViewer } from '../components/SourceViewer';
 import { ResizablePanes, type PaneState } from '../components/ResizablePanes';
 import { Modal, ConfirmDialog } from '../components/Modal';
 import {
-  ArrowLeft, Plus, FileText, Trash2,
-  PanelLeftClose, PanelLeftOpen, Zap, Layers, Settings as SettingsIcon,
+  ArrowLeft, Plus, Minus, FileText, Trash2,
+  Zap, Layers, Settings as SettingsIcon, ChevronDown, ChevronUp, Maximize2,
 } from 'lucide-react';
 import { ThemeSettings } from '../components/ThemeSettings';
 import { distributeItems, type SessionMode } from '../engine/ntd';
@@ -21,16 +21,27 @@ interface Props {
   onStartBlurt: (itemCount: number, mode: SessionMode) => void;
 }
 
+const LEFT_PANE_MIN_WIDTH = 44;
+const LEFT_PANE_DEFAULT_WIDTH = 224;
+
 export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt }: Props) {
   const { pages, createPage, updatePage, deletePage, addTemplate, updateTemplate, deleteTemplate } = usePages(notebookId);
-  const { sources, addSource, deleteSource } = useSources(notebookId);
+  const { sources, addSource, updateSource, deleteSource } = useSources(notebookId);
   const [activePageId, setActivePageId] = useState<string | null>(null);
   const [activeSourceId, setActiveSourceId] = useState<string | null>(null);
-  const [leftPane, setLeftPane] = useState<PaneState>({ width: 224, visible: true });
+  const [leftPane, setLeftPane] = useState<PaneState>({ width: LEFT_PANE_DEFAULT_WIDTH, visible: true });
   const [rightPane, setRightPane] = useState<PaneState>({ width: 320, visible: false });
+  const [leftPaneCollapsed, setLeftPaneCollapsed] = useState(false);
+  const lastLeftPaneWidth = useRef(LEFT_PANE_DEFAULT_WIDTH);
+  const [sourcePaneCollapsed, setSourcePaneCollapsed] = useState(false);
+  const [notebookPaneCollapsed, setNotebookPaneCollapsed] = useState(false);
   const [newPageOpen, setNewPageOpen] = useState(false);
   const [newPageTitle, setNewPageTitle] = useState('');
   const [newPageType, setNewPageType] = useState<TemplateType>('plain');
+  const [pageMenuOpen, setPageMenuOpen] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [sourceMenuOpen, setSourceMenuOpen] = useState(false);
+  const [editingSourceTitle, setEditingSourceTitle] = useState(false);
   const [blurtOpen, setBlurtOpen] = useState(false);
   const [blurtItemCount, setBlurtItemCount] = useState(15);
   const [blurtMode, setBlurtMode] = useState<SessionMode>('active');
@@ -42,6 +53,16 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
 
   const activePage = pages.find((p) => p.id === activePageId) || null;
   const activeSource = sources.find((s) => s.id === activeSourceId) || null;
+
+  const toggleLeftPaneCollapsed = () => {
+    if (!leftPaneCollapsed) {
+      lastLeftPaneWidth.current = leftPane.width;
+      setLeftPane((s) => ({ ...s, width: LEFT_PANE_MIN_WIDTH }));
+    } else {
+      setLeftPane((s) => ({ ...s, width: lastLeftPaneWidth.current }));
+    }
+    setLeftPaneCollapsed((c) => !c);
+  };
 
   const handleCreatePage = async () => {
     const title = newPageTitle.trim() || `Page ${pages.length + 1}`;
@@ -87,13 +108,6 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
             <SettingsIcon size={16} />
           </button>
           <button
-            className="btn-ghost !p-1.5"
-            onClick={() => setLeftPane((s) => ({ ...s, visible: !s.visible }))}
-            aria-label="Toggle sidebar"
-          >
-            {leftPane.visible ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
-          </button>
-          <button
             className="btn-primary !py-1.5 !px-3 text-xs"
             onClick={() => setBlurtOpen(true)}
             disabled={pages.length === 0}
@@ -109,112 +123,260 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
         rightState={rightPane}
         onRightStateChange={setRightPane}
         left={
-          <aside className="h-full overflow-y-auto border-r" style={{ borderColor: 'var(--border-soft)', background: 'var(--bg-1)' }}>
-            <div className="p-2">
-              <div className="flex items-center justify-between px-2 py-1.5">
-                <span className="label">Pages</span>
-                <button className="btn-ghost !p-1" onClick={() => setNewPageOpen(true)} aria-label="New page"><Plus size={15} /></button>
-              </div>
-              <div className="space-y-0.5">
-                {pages.map((p) => (
-                  <div
-                    key={p.id}
-                    className={`group flex items-center gap-1.5 rounded-lg px-2.5 py-2 cursor-pointer transition ${activePageId === p.id ? 'bg-amber-500/10' : 'hover:bg-slate-800'}`}
-                    onClick={() => setActivePageId(p.id)}
-                  >
-                    <FileText size={14} style={{ color: activePageId === p.id ? 'var(--accent)' : 'var(--text-3)' }} />
-                    <span className="text-sm truncate flex-1" style={{ color: activePageId === p.id ? 'var(--text-0)' : 'var(--text-2)' }}>{p.title}</span>
-                    <span className="text-[10px] uppercase" style={{ color: 'var(--text-3)' }}>{p.templateType}</span>
-                    <button className="btn-ghost !p-0.5 opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); setConfirmDelPage(p.id); }} aria-label="Delete page"><Trash2 size={12} /></button>
-                  </div>
-                ))}
-                {pages.length === 0 && <p className="text-xs px-2.5 py-2" style={{ color: 'var(--text-3)' }}>No pages yet.</p>}
-              </div>
+          <aside className="h-full overflow-y-auto border-r flex flex-col" style={{ borderColor: 'var(--border-soft)', background: 'var(--bg-1)' }}>
+            <div className="flex items-center justify-end px-2 py-1.5">
+              <button
+                className="btn-ghost !p-1"
+                onClick={toggleLeftPaneCollapsed}
+                aria-label={leftPaneCollapsed ? 'Expand pane' : 'Collapse pane'}
+                title={leftPaneCollapsed ? 'Expand' : 'Collapse'}
+              >
+                {leftPaneCollapsed ? <Maximize2 size={14} /> : <Minus size={14} />}
+              </button>
             </div>
-            <div className="divider mx-2" />
-            <div className="p-2">
-              <div className="flex items-center justify-between px-2 py-1.5">
-                <span className="label">Sources</span>
-                <button className="btn-ghost !p-1" onClick={() => fileInput.current?.click()} aria-label="Add source"><Plus size={15} /></button>
-                <input ref={fileInput} type="file" multiple className="hidden" onChange={(e) => e.target.files && handleFiles(e.target.files)} />
-              </div>
-              <div className="space-y-0.5">
-                {sources.map((s) => (
-                  <div key={s.id} className="group flex items-center gap-1.5 rounded-lg px-2.5 py-2 cursor-pointer transition hover:bg-slate-800" onClick={() => setActiveSourceId(s.id)}>
-                    <span className="text-xs font-mono uppercase px-1.5 py-0.5 rounded" style={{ background: 'var(--bg-2)', color: 'var(--text-3)' }}>{s.kind}</span>
-                    <span className="text-sm truncate flex-1" style={{ color: 'var(--text-2)' }}>{s.name}</span>
-                    <button className="btn-ghost !p-0.5 opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); deleteSource(s.id); if (activeSourceId === s.id) setActiveSourceId(null); }} aria-label="Delete source"><Trash2 size={12} /></button>
-                  </div>
-                ))}
-                {sources.length === 0 && <p className="text-xs px-2.5 py-2" style={{ color: 'var(--text-3)' }}>Drop files or click + to add.</p>}
-              </div>
-            </div>
+            <input ref={fileInput} type="file" multiple className="hidden" onChange={(e) => e.target.files && handleFiles(e.target.files)} />
           </aside>
         }
         middle={
           <main className="blurt-split-pane flex h-full overflow-hidden">
             <div
-              className="blurt-source-pane flex-1 surface m-2 overflow-hidden flex flex-col min-w-0"
+              className={`blurt-source-pane surface m-2 overflow-hidden flex flex-col min-w-0 ${sourcePaneCollapsed ? 'flex-none w-14' : 'flex-1'}`}
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
               onDrop={onDrop}
               style={dragOver ? { borderColor: 'var(--accent)' } : undefined}
             >
-              {activeSource ? (
-                <SourceViewer source={activeSource} />
-              ) : (
-                <div className="flex-1 flex items-center justify-center p-6 text-center">
-                  <div>
-                    <Layers size={28} className="mx-auto mb-2" style={{ color: 'var(--text-3)' }} />
-                    <p className="text-sm mb-1" style={{ color: 'var(--text-2)' }}>Select a source or drop a file here</p>
-                    <p className="text-xs" style={{ color: 'var(--text-3)' }}>PDF, DOCX, TXT, MD, or images</p>
+              <div className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: 'var(--border-soft)' }}>
+                {!sourcePaneCollapsed && (
+                  <div className="relative flex items-center gap-1.5 min-w-0 flex-1">
+                    {activeSource ? (
+                      editingSourceTitle ? (
+                        <input
+                          className="input !bg-transparent !border-transparent !px-1 font-semibold"
+                          style={{ color: 'var(--text-0)' }}
+                          autoFocus
+                          value={activeSource.name}
+                          onChange={(e) => updateSource(activeSource.id, { name: e.target.value })}
+                          onBlur={() => setEditingSourceTitle(false)}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur(); }}
+                        />
+                      ) : (
+                        <span
+                          className="font-semibold truncate cursor-text"
+                          style={{ color: 'var(--text-0)' }}
+                          onClick={() => setEditingSourceTitle(true)}
+                          title="Click to rename"
+                        >
+                          {activeSource.name}
+                        </span>
+                      )
+                    ) : (
+                      <span className="font-semibold truncate" style={{ color: 'var(--text-0)' }}>Select a source</span>
+                    )}
+                    <button
+                      className="btn-ghost !p-1 shrink-0 relative z-20"
+                      onClick={() => {
+                        setEditingSourceTitle(false);
+                        setSourceMenuOpen((o) => !o);
+                      }}
+                      aria-label={sourceMenuOpen ? 'Close source list' : 'Change source'}
+                      title={sourceMenuOpen ? 'Close' : 'Change source'}
+                    >
+                      {sourceMenuOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
+                    {sourceMenuOpen && (
+                      <button
+                        className="btn-ghost !p-1 shrink-0 relative z-20"
+                        onClick={() => { setSourceMenuOpen(false); fileInput.current?.click(); }}
+                        aria-label="Add source"
+                        title="Add source"
+                      >
+                        <Plus size={14} />
+                      </button>
+                    )}
+                    {sourceMenuOpen && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setSourceMenuOpen(false)} />
+                        <div
+                          className="absolute top-full left-0 mt-1 w-56 max-h-64 overflow-y-auto rounded-lg border z-20 shadow-lg"
+                          style={{ background: 'var(--bg-1)', borderColor: 'var(--border-soft)' }}
+                        >
+                          {sources.map((s) => (
+                            <div
+                              key={s.id}
+                              className={`group flex items-center gap-1.5 px-3 py-2 cursor-pointer transition ${activeSourceId === s.id ? 'bg-amber-500/10' : 'hover:bg-slate-800'}`}
+                              onClick={() => { setActiveSourceId(s.id); setSourceMenuOpen(false); }}
+                            >
+                              <span className="text-xs font-mono uppercase px-1.5 py-0.5 rounded shrink-0" style={{ background: 'var(--bg-2)', color: 'var(--text-3)' }}>{s.kind}</span>
+                              <span className="text-sm truncate flex-1" style={{ color: activeSourceId === s.id ? 'var(--text-0)' : 'var(--text-1)' }}>{s.name}</span>
+                              <button
+                                className="btn-ghost !p-0.5 opacity-0 group-hover:opacity-100"
+                                onClick={(e) => { e.stopPropagation(); deleteSource(s.id); if (activeSourceId === s.id) setActiveSourceId(null); }}
+                                aria-label="Delete source"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          ))}
+                          {sources.length === 0 && (
+                            <div className="px-3 py-2 text-xs" style={{ color: 'var(--text-3)' }}>No sources yet.</div>
+                          )}
+                        </div>
+                      </>
+                    )}
                   </div>
-                </div>
+                )}
+                <button
+                  className="btn-ghost !p-1 shrink-0"
+                  onClick={() => setSourcePaneCollapsed((c) => !c)}
+                  aria-label={sourcePaneCollapsed ? 'Expand source pane' : 'Collapse source pane'}
+                  title={sourcePaneCollapsed ? 'Expand' : 'Collapse'}
+                >
+                  {sourcePaneCollapsed ? <Maximize2 size={14} /> : <Minus size={14} />}
+                </button>
+              </div>
+              {!sourcePaneCollapsed && (
+                activeSource ? (
+                  <SourceViewer source={activeSource} />
+                ) : (
+                  <div className="flex-1 flex items-center justify-center p-6 text-center">
+                    <div>
+                      <Layers size={28} className="mx-auto mb-2" style={{ color: 'var(--text-3)' }} />
+                      <p className="text-sm mb-1" style={{ color: 'var(--text-2)' }}>Select a source or drop a file here</p>
+                      <p className="text-xs" style={{ color: 'var(--text-3)' }}>PDF, DOCX, TXT, MD, or images</p>
+                    </div>
+                  </div>
+                )
               )}
             </div>
-            <div className="blurt-notebook-pane flex-1 surface m-2 overflow-hidden flex flex-col min-w-0">
+            <div className={`blurt-notebook-pane surface m-2 overflow-hidden flex flex-col min-w-0 ${notebookPaneCollapsed ? 'flex-none w-14' : 'flex-1'}`}>
               <div className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: 'var(--border-soft)' }}>
-                <div className="flex items-center gap-2 min-w-0">
-                  {activePage ? (
-                    <input className="input !bg-transparent !border-transparent !px-1 font-semibold" style={{ color: 'var(--text-0)' }} value={activePage.title} onChange={(e) => updatePage(activePage.id, { title: e.target.value })} />
-                  ) : (
-                    <span className="text-sm" style={{ color: 'var(--text-3)' }}>Notebook</span>
-                  )}
-                </div>
-                {activePage && (
-                  <button className="btn-subtle !py-1.5 !px-2.5 text-xs" onClick={() => handleAddTemplate(activePage.templateType)}>
-                    <Plus size={14} /> Add {defaultTitleFor(activePage.templateType)}
-                  </button>
-                )}
-              </div>
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                {activePage ? (
-                  activePage.templates.length === 0 ? (
-                    <div className="text-center py-12">
-                      <p className="text-sm mb-3" style={{ color: 'var(--text-3)' }}>
-                        This page type is <span className="font-semibold" style={{ color: 'var(--text-1)' }}>{defaultTitleFor(activePage.templateType)}</span>.
-                        Add a block to start.
-                      </p>
-                      <button className="btn-primary" onClick={() => handleAddTemplate(activePage.templateType)}>
-                        <Plus size={14} /> Add {defaultTitleFor(activePage.templateType)}
+                {!notebookPaneCollapsed && (
+                  <div className="relative flex items-center gap-1.5 min-w-0 flex-1">
+                    {activePage ? (
+                      editingTitle ? (
+                        <input
+                          className="input !bg-transparent !border-transparent !px-1 font-semibold"
+                          style={{ color: 'var(--text-0)' }}
+                          autoFocus
+                          value={activePage.title}
+                          onChange={(e) => updatePage(activePage.id, { title: e.target.value })}
+                          onBlur={() => setEditingTitle(false)}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur(); }}
+                        />
+                      ) : (
+                        <span
+                          className="font-semibold truncate cursor-text"
+                          style={{ color: 'var(--text-0)' }}
+                          onClick={() => setEditingTitle(true)}
+                          title="Click to rename"
+                        >
+                          {activePage.title}
+                        </span>
+                      )
+                    ) : (
+                      <span className="font-semibold truncate" style={{ color: 'var(--text-0)' }}>Select a page</span>
+                    )}
+                    <button
+                      className="btn-ghost !p-1 relative z-20"
+                      onClick={() => {
+                        setEditingTitle(false);
+                        setPageMenuOpen((o) => !o);
+                      }}
+                      aria-label={pageMenuOpen ? 'Close page list' : 'Change page'}
+                      title={pageMenuOpen ? 'Close' : 'Change page'}
+                    >
+                      {pageMenuOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
+                    {pageMenuOpen && (
+                      <button
+                        className="btn-ghost !p-1 relative z-20"
+                        onClick={() => { setPageMenuOpen(false); setNewPageOpen(true); }}
+                        aria-label="Add page"
+                        title="Add page"
+                      >
+                        <Plus size={14} />
                       </button>
-                    </div>
-                  ) : (
-                    activePage.templates.map((t) => (
-                      <TemplateEditor
-                        key={t.id}
-                        template={t}
-                        onChange={(nt) => updateTemplate(activePage.id, nt)}
-                        onDelete={() => deleteTemplate(activePage.id, t.id)}
-                      />
-                    ))
-                  )
-                ) : (
-                  <div className="text-center py-12" style={{ color: 'var(--text-3)' }}>
-                    Select or create a page to start adding blocks.
+                    )}
+                    {pageMenuOpen && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setPageMenuOpen(false)} />
+                        <div
+                          className="absolute top-full left-0 mt-1 w-56 max-h-64 overflow-y-auto rounded-lg border z-20 shadow-lg"
+                          style={{ background: 'var(--bg-1)', borderColor: 'var(--border-soft)' }}
+                        >
+                          {pages.map((p) => (
+                            <div
+                              key={p.id}
+                              className={`group flex items-center gap-1.5 px-3 py-2 cursor-pointer transition ${activePageId === p.id ? 'bg-amber-500/10' : 'hover:bg-slate-800'}`}
+                              onClick={() => { setActivePageId(p.id); setPageMenuOpen(false); }}
+                            >
+                              <FileText size={14} style={{ color: activePageId === p.id ? 'var(--accent)' : 'var(--text-3)' }} />
+                              <span className="text-sm truncate flex-1" style={{ color: activePageId === p.id ? 'var(--text-0)' : 'var(--text-1)' }}>{p.title}</span>
+                              <span className="text-[10px] uppercase" style={{ color: 'var(--text-3)' }}>{p.templateType}</span>
+                              <button
+                                className="btn-ghost !p-0.5 opacity-0 group-hover:opacity-100"
+                                onClick={(e) => { e.stopPropagation(); setPageMenuOpen(false); setConfirmDelPage(p.id); }}
+                                aria-label="Delete page"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          ))}
+                          {pages.length === 0 && (
+                            <div className="px-3 py-2 text-xs" style={{ color: 'var(--text-3)' }}>No pages yet.</div>
+                          )}
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
+                <div className="flex items-center gap-1.5 ml-auto">
+                  {!notebookPaneCollapsed && activePage && (
+                    <button className="btn-subtle !py-1.5 !px-2.5 text-xs" onClick={() => handleAddTemplate(activePage.templateType)}>
+                      <Plus size={14} /> Add {defaultTitleFor(activePage.templateType)}
+                    </button>
+                  )}
+                  <button
+                    className="btn-ghost !p-1"
+                    onClick={() => setNotebookPaneCollapsed((c) => !c)}
+                    aria-label={notebookPaneCollapsed ? 'Expand notebook pane' : 'Collapse notebook pane'}
+                    title={notebookPaneCollapsed ? 'Expand' : 'Collapse'}
+                  >
+                    {notebookPaneCollapsed ? <Maximize2 size={14} /> : <Minus size={14} />}
+                  </button>
+                </div>
               </div>
+              {!notebookPaneCollapsed && (
+                <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                  {activePage ? (
+                    activePage.templates.length === 0 ? (
+                      <div className="text-center py-12">
+                        <p className="text-sm mb-3" style={{ color: 'var(--text-3)' }}>
+                          This page type is <span className="font-semibold" style={{ color: 'var(--text-1)' }}>{defaultTitleFor(activePage.templateType)}</span>.
+                          Add a block to start.
+                        </p>
+                        <button className="btn-primary" onClick={() => handleAddTemplate(activePage.templateType)}>
+                          <Plus size={14} /> Add {defaultTitleFor(activePage.templateType)}
+                        </button>
+                      </div>
+                    ) : (
+                      activePage.templates.map((t) => (
+                        <TemplateEditor
+                          key={t.id}
+                          template={t}
+                          onChange={(nt) => updateTemplate(activePage.id, nt)}
+                          onDelete={() => deleteTemplate(activePage.id, t.id)}
+                        />
+                      ))
+                    )
+                  ) : (
+                    <div className="text-center py-12" style={{ color: 'var(--text-3)' }}>
+                      Select or create a page to start adding blocks.
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </main>
         }
