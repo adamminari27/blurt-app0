@@ -21,18 +21,12 @@ interface Props {
   onStartBlurt: (itemCount: number, mode: SessionMode) => void;
 }
 
-const LEFT_PANE_MIN_WIDTH = 44;
-const LEFT_PANE_DEFAULT_WIDTH = 224;
-
 export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt }: Props) {
   const { pages, createPage, updatePage, deletePage, addTemplate, updateTemplate, deleteTemplate } = usePages(notebookId);
   const { sources, addSource, updateSource, deleteSource } = useSources(notebookId);
   const [activePageId, setActivePageId] = useState<string | null>(null);
   const [activeSourceId, setActiveSourceId] = useState<string | null>(null);
-  const [leftPane, setLeftPane] = useState<PaneState>({ width: LEFT_PANE_DEFAULT_WIDTH, visible: true });
   const [rightPane, setRightPane] = useState<PaneState>({ width: 320, visible: false });
-  const [leftPaneCollapsed, setLeftPaneCollapsed] = useState(false);
-  const lastLeftPaneWidth = useRef(LEFT_PANE_DEFAULT_WIDTH);
   const [sourcePaneCollapsed, setSourcePaneCollapsed] = useState(false);
   const [notebookPaneCollapsed, setNotebookPaneCollapsed] = useState(false);
   const [newPageOpen, setNewPageOpen] = useState(false);
@@ -53,16 +47,6 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
 
   const activePage = pages.find((p) => p.id === activePageId) || null;
   const activeSource = sources.find((s) => s.id === activeSourceId) || null;
-
-  const toggleLeftPaneCollapsed = () => {
-    if (!leftPaneCollapsed) {
-      lastLeftPaneWidth.current = leftPane.width;
-      setLeftPane((s) => ({ ...s, width: LEFT_PANE_MIN_WIDTH }));
-    } else {
-      setLeftPane((s) => ({ ...s, width: lastLeftPaneWidth.current }));
-    }
-    setLeftPaneCollapsed((c) => !c);
-  };
 
   const handleCreatePage = async () => {
     const title = newPageTitle.trim() || `Page ${pages.length + 1}`;
@@ -99,10 +83,10 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
 
   return (
     <div className="h-screen flex flex-col" style={{ background: 'var(--bg-0)' }}>
-      <header className="flex items-center gap-2 px-3 py-2.5 border-b" style={{ borderColor: 'var(--border-soft)', background: 'var(--bg-1)' }}>
+      <header className="flex flex-wrap items-center gap-2 px-3 py-2.5 border-b" style={{ borderColor: 'var(--border-soft)', background: 'var(--bg-1)' }}>
         <button className="btn-ghost !p-1.5" onClick={onBack} aria-label="Back"><ArrowLeft size={18} /></button>
-        <h1 className="font-semibold truncate" style={{ color: 'var(--text-0)' }}>{notebookName}</h1>
-        <span className="chip ml-1" style={{ background: 'var(--bg-2)', color: 'var(--text-3)' }}>{pages.length} pages</span>
+        <h1 className="font-semibold truncate min-w-0" style={{ color: 'var(--text-0)' }}>{notebookName}</h1>
+        <span className="chip ml-1 shrink-0" style={{ background: 'var(--bg-2)', color: 'var(--text-3)' }}>{pages.length} pages</span>
         <div className="ml-auto flex items-center gap-1.5">
           <button className="btn-ghost !p-1.5" onClick={() => setThemeOpen(true)} title="Settings" aria-label="Settings">
             <SettingsIcon size={16} />
@@ -117,30 +101,21 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
         </div>
       </header>
 
+      {/* Hidden file input lives here now that the left pane is gone */}
+      <input ref={fileInput} type="file" multiple className="hidden" onChange={(e) => e.target.files && handleFiles(e.target.files)} />
+
       <ResizablePanes
-        leftState={leftPane}
-        onLeftStateChange={setLeftPane}
+        leftState={{ width: 0, visible: false }}
+        onLeftStateChange={() => {}}
         rightState={rightPane}
         onRightStateChange={setRightPane}
-        left={
-          <aside className="h-full overflow-y-auto border-r flex flex-col" style={{ borderColor: 'var(--border-soft)', background: 'var(--bg-1)' }}>
-            <div className="flex items-center justify-end px-2 py-1.5">
-              <button
-                className="btn-ghost !p-1"
-                onClick={toggleLeftPaneCollapsed}
-                aria-label={leftPaneCollapsed ? 'Expand pane' : 'Collapse pane'}
-                title={leftPaneCollapsed ? 'Expand' : 'Collapse'}
-              >
-                {leftPaneCollapsed ? <Maximize2 size={14} /> : <Minus size={14} />}
-              </button>
-            </div>
-            <input ref={fileInput} type="file" multiple className="hidden" onChange={(e) => e.target.files && handleFiles(e.target.files)} />
-          </aside>
-        }
+        left={null}
         middle={
-          <main className="blurt-split-pane flex h-full overflow-hidden">
+          <main className="blurt-split-pane flex flex-col md:flex-row h-full overflow-y-auto md:overflow-hidden">
             <div
-              className={`blurt-source-pane surface m-2 overflow-hidden flex flex-col min-w-0 ${sourcePaneCollapsed ? 'flex-none w-14' : 'flex-1'}`}
+              className={`blurt-source-pane surface m-2 overflow-hidden flex flex-col min-w-0 min-h-0 ${
+                sourcePaneCollapsed ? 'flex-none h-12 md:h-auto md:w-14' : 'flex-1 min-h-[240px] md:min-h-0'
+              }`}
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
               onDrop={onDrop}
@@ -198,7 +173,7 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
                       <>
                         <div className="fixed inset-0 z-10" onClick={() => setSourceMenuOpen(false)} />
                         <div
-                          className="absolute top-full left-0 mt-1 w-56 max-h-64 overflow-y-auto rounded-lg border z-20 shadow-lg"
+                          className="absolute top-full left-0 mt-1 w-56 max-w-[80vw] max-h-64 overflow-y-auto rounded-lg border z-20 shadow-lg"
                           style={{ background: 'var(--bg-1)', borderColor: 'var(--border-soft)' }}
                         >
                           {sources.map((s) => (
@@ -249,7 +224,11 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
                 )
               )}
             </div>
-            <div className={`blurt-notebook-pane surface m-2 overflow-hidden flex flex-col min-w-0 ${notebookPaneCollapsed ? 'flex-none w-14' : 'flex-1'}`}>
+            <div
+              className={`blurt-notebook-pane surface m-2 overflow-hidden flex flex-col min-w-0 min-h-0 ${
+                notebookPaneCollapsed ? 'flex-none h-12 md:h-auto md:w-14' : 'flex-1 min-h-[240px] md:min-h-0'
+              }`}
+            >
               <div className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: 'var(--border-soft)' }}>
                 {!notebookPaneCollapsed && (
                   <div className="relative flex items-center gap-1.5 min-w-0 flex-1">
@@ -302,7 +281,7 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
                       <>
                         <div className="fixed inset-0 z-10" onClick={() => setPageMenuOpen(false)} />
                         <div
-                          className="absolute top-full left-0 mt-1 w-56 max-h-64 overflow-y-auto rounded-lg border z-20 shadow-lg"
+                          className="absolute top-full left-0 mt-1 w-56 max-w-[80vw] max-h-64 overflow-y-auto rounded-lg border z-20 shadow-lg"
                           style={{ background: 'var(--bg-1)', borderColor: 'var(--border-soft)' }}
                         >
                           {pages.map((p) => (
@@ -402,7 +381,7 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
           </div>
           <div>
             <label className="label block mb-1.5">Page type (one type per page)</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {(['plain', 'table', 'equation', 'bullet', 'flashcard', 'drawing'] as const).map((t) => (
                 <button
                   key={t}
