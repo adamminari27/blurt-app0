@@ -21,8 +21,8 @@ interface Props {
   onStartBlurt: (itemCount: number, mode: SessionMode) => void;
 }
 
-const LEFT_PANE_MIN_WIDTH = 44;
-const LEFT_PANE_DEFAULT_WIDTH = 224;
+const LEFT_PANE_MIN_WIDTH = 0;
+const LEFT_PANE_DEFAULT_WIDTH = 0;
 
 export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt }: Props) {
   const { pages, createPage, updatePage, deletePage, addTemplate, updateTemplate, deleteTemplate } = usePages(notebookId);
