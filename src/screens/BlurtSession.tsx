@@ -636,7 +636,7 @@ function SummaryScreen({ accuracy, onExit, notebookId }: { accuracy: number; onE
     </div>
   );
 }
-export function BlurtSession(props: any) {
+export function NewBlurtSession(props: any) {
   return (
     <View style={{ flex: 1 }}>
       <View style={{ flex: 1 }}>
