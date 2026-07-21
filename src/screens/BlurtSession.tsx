@@ -9,7 +9,7 @@ import { SmartMathInput } from '../components/SmartMathInput';
 import type { SessionMode } from '../engine/ntd';
 import { getScoringMode, type ScoringMode } from '../hooks/useScoringMode';
 import { ArrowLeft, ChevronRight, Trophy, Target, Eye, Check } from 'lucide-react';
-import { DonateFooter } from './Footer';
+
 interface Props {
   notebookId: string;
   itemCount: number;
@@ -29,7 +29,7 @@ function scoreColor(pct: number): string {
   return 'rgb(34, 197, 94)';
 }
 
-function BlurtSession({ notebookId, itemCount, mode, onExit }: Props) {
+export function BlurtSession({ notebookId, itemCount, mode, onExit }: Props) {
   const {
     sessionQueue, queueIndex, buildQueue, scoreAndRecord,
     reinsertIfFailed, advance, finalizeSession,
@@ -634,16 +634,5 @@ function SummaryScreen({ accuracy, onExit, notebookId }: { accuracy: number; onE
         </div>
       </div>
     </div>
-  );
-}
-export function NewBlurtSession(props: any) {
-  return (
-    <View style={{ flex: 1 }}>
-      <View style={{ flex: 1 }}>
-        {/* We render the original screen content here */}
-        <OriginalMyScreen {...props} /> 
-      </View>
-      <DonateFooter />
-    </View>
   );
 }

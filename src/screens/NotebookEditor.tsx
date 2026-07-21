@@ -9,7 +9,7 @@ import { ResizablePanes, type PaneState } from '../components/ResizablePanes';
 import { Modal, ConfirmDialog } from '../components/Modal';
 import {
   ArrowLeft, Plus, Minus, FileText, Trash2,
-  Zap, Layers, Settings as SettingsIcon, ChevronDown, ChevronUp, Maximize2,
+  Zap, Layers, Settings as SettingsIcon, ChevronDown, Maximize2,
 } from 'lucide-react';
 import { ThemeSettings } from '../components/ThemeSettings';
 import { distributeItems, type SessionMode } from '../engine/ntd';
@@ -21,12 +21,12 @@ interface Props {
   onStartBlurt: (itemCount: number, mode: SessionMode) => void;
 }
 
-const LEFT_PANE_MIN_WIDTH = 0;
-const LEFT_PANE_DEFAULT_WIDTH = 0;
+const LEFT_PANE_MIN_WIDTH = 44;
+const LEFT_PANE_DEFAULT_WIDTH = 224;
 
 export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt }: Props) {
   const { pages, createPage, updatePage, deletePage, addTemplate, updateTemplate, deleteTemplate } = usePages(notebookId);
-  const { sources, addSource, updateSource, deleteSource } = useSources(notebookId);
+  const { sources, addSource, deleteSource } = useSources(notebookId);
   const [activePageId, setActivePageId] = useState<string | null>(null);
   const [activeSourceId, setActiveSourceId] = useState<string | null>(null);
   const [leftPane, setLeftPane] = useState<PaneState>({ width: LEFT_PANE_DEFAULT_WIDTH, visible: true });
@@ -40,8 +40,6 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
   const [newPageType, setNewPageType] = useState<TemplateType>('plain');
   const [pageMenuOpen, setPageMenuOpen] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
-  const [sourceMenuOpen, setSourceMenuOpen] = useState(false);
-  const [editingSourceTitle, setEditingSourceTitle] = useState(false);
   const [blurtOpen, setBlurtOpen] = useState(false);
   const [blurtItemCount, setBlurtItemCount] = useState(15);
   const [blurtMode, setBlurtMode] = useState<SessionMode>('active');
@@ -134,7 +132,25 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
                 {leftPaneCollapsed ? <Maximize2 size={14} /> : <Minus size={14} />}
               </button>
             </div>
-            <input ref={fileInput} type="file" multiple className="hidden" onChange={(e) => e.target.files && handleFiles(e.target.files)} />
+            {!leftPaneCollapsed && (
+              <div className="p-2">
+                <div className="flex items-center justify-between px-2 py-1.5">
+                  <span className="label">Sources</span>
+                  <button className="btn-ghost !p-1" onClick={() => fileInput.current?.click()} aria-label="Add source"><Plus size={15} /></button>
+                  <input ref={fileInput} type="file" multiple className="hidden" onChange={(e) => e.target.files && handleFiles(e.target.files)} />
+                </div>
+                <div className="space-y-0.5">
+                  {sources.map((s) => (
+                    <div key={s.id} className="group flex items-center gap-1.5 rounded-lg px-2.5 py-2 cursor-pointer transition hover:bg-slate-800" onClick={() => setActiveSourceId(s.id)}>
+                      <span className="text-xs font-mono uppercase px-1.5 py-0.5 rounded" style={{ background: 'var(--bg-2)', color: 'var(--text-3)' }}>{s.kind}</span>
+                      <span className="text-sm truncate flex-1" style={{ color: 'var(--text-2)' }}>{s.name}</span>
+                      <button className="btn-ghost !p-0.5 opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); deleteSource(s.id); if (activeSourceId === s.id) setActiveSourceId(null); }} aria-label="Delete source"><Trash2 size={12} /></button>
+                    </div>
+                  ))}
+                  {sources.length === 0 && <p className="text-xs px-2.5 py-2" style={{ color: 'var(--text-3)' }}>Drop files or click + to add.</p>}
+                </div>
+              </div>
+            )}
           </aside>
         }
         middle={
@@ -146,88 +162,9 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
               onDrop={onDrop}
               style={dragOver ? { borderColor: 'var(--accent)' } : undefined}
             >
-              <div className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: 'var(--border-soft)' }}>
-                {!sourcePaneCollapsed && (
-                  <div className="relative flex items-center gap-1.5 min-w-0 flex-1">
-                    {activeSource ? (
-                      editingSourceTitle ? (
-                        <input
-                          className="input !bg-transparent !border-transparent !px-1 font-semibold"
-                          style={{ color: 'var(--text-0)' }}
-                          autoFocus
-                          value={activeSource.name}
-                          onChange={(e) => updateSource(activeSource.id, { name: e.target.value })}
-                          onBlur={() => setEditingSourceTitle(false)}
-                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur(); }}
-                        />
-                      ) : (
-                        <span
-                          className="font-semibold truncate cursor-text"
-                          style={{ color: 'var(--text-0)' }}
-                          onClick={() => setEditingSourceTitle(true)}
-                          title="Click to rename"
-                        >
-                          {activeSource.name}
-                        </span>
-                      )
-                    ) : (
-                      <span className="font-semibold truncate" style={{ color: 'var(--text-0)' }}>Select a source</span>
-                    )}
-                    <button
-                      className="btn-ghost !p-1 shrink-0 relative z-20"
-                      onClick={() => {
-                        setEditingSourceTitle(false);
-                        setSourceMenuOpen((o) => !o);
-                      }}
-                      aria-label={sourceMenuOpen ? 'Close source list' : 'Change source'}
-                      title={sourceMenuOpen ? 'Close' : 'Change source'}
-                    >
-                      {sourceMenuOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    </button>
-                    {sourceMenuOpen && (
-                      <button
-                        className="btn-ghost !p-1 shrink-0 relative z-20"
-                        onClick={() => { setSourceMenuOpen(false); fileInput.current?.click(); }}
-                        aria-label="Add source"
-                        title="Add source"
-                      >
-                        <Plus size={14} />
-                      </button>
-                    )}
-                    {sourceMenuOpen && (
-                      <>
-                        <div className="fixed inset-0 z-10" onClick={() => setSourceMenuOpen(false)} />
-                        <div
-                          className="absolute top-full left-0 mt-1 w-56 max-h-64 overflow-y-auto rounded-lg border z-20 shadow-lg"
-                          style={{ background: 'var(--bg-1)', borderColor: 'var(--border-soft)' }}
-                        >
-                          {sources.map((s) => (
-                            <div
-                              key={s.id}
-                              className={`group flex items-center gap-1.5 px-3 py-2 cursor-pointer transition ${activeSourceId === s.id ? 'bg-amber-500/10' : 'hover:bg-slate-800'}`}
-                              onClick={() => { setActiveSourceId(s.id); setSourceMenuOpen(false); }}
-                            >
-                              <span className="text-xs font-mono uppercase px-1.5 py-0.5 rounded shrink-0" style={{ background: 'var(--bg-2)', color: 'var(--text-3)' }}>{s.kind}</span>
-                              <span className="text-sm truncate flex-1" style={{ color: activeSourceId === s.id ? 'var(--text-0)' : 'var(--text-1)' }}>{s.name}</span>
-                              <button
-                                className="btn-ghost !p-0.5 opacity-0 group-hover:opacity-100"
-                                onClick={(e) => { e.stopPropagation(); deleteSource(s.id); if (activeSourceId === s.id) setActiveSourceId(null); }}
-                                aria-label="Delete source"
-                              >
-                                <Trash2 size={12} />
-                              </button>
-                            </div>
-                          ))}
-                          {sources.length === 0 && (
-                            <div className="px-3 py-2 text-xs" style={{ color: 'var(--text-3)' }}>No sources yet.</div>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
+              <div className="flex items-center justify-end px-2 py-1.5 border-b" style={{ borderColor: 'var(--border-soft)' }}>
                 <button
-                  className="btn-ghost !p-1 shrink-0"
+                  className="btn-ghost !p-1"
                   onClick={() => setSourcePaneCollapsed((c) => !c)}
                   aria-label={sourcePaneCollapsed ? 'Expand source pane' : 'Collapse source pane'}
                   title={sourcePaneCollapsed ? 'Expand' : 'Collapse'}
@@ -252,7 +189,7 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
             <div className={`blurt-notebook-pane surface m-2 overflow-hidden flex flex-col min-w-0 ${notebookPaneCollapsed ? 'flex-none w-14' : 'flex-1'}`}>
               <div className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: 'var(--border-soft)' }}>
                 {!notebookPaneCollapsed && (
-                  <div className="relative flex items-center gap-1.5 min-w-0 flex-1">
+                  <div className="relative flex items-center gap-1.5 min-w-0">
                     {activePage ? (
                       editingTitle ? (
                         <input
@@ -278,26 +215,21 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
                       <span className="font-semibold truncate" style={{ color: 'var(--text-0)' }}>Select a page</span>
                     )}
                     <button
-                      className="btn-ghost !p-1 relative z-20"
+                      className="btn-ghost !p-1"
                       onClick={() => {
                         setEditingTitle(false);
-                        setPageMenuOpen((o) => !o);
+                        if (pageMenuOpen) {
+                          setPageMenuOpen(false);
+                          setNewPageOpen(true);
+                        } else {
+                          setPageMenuOpen(true);
+                        }
                       }}
-                      aria-label={pageMenuOpen ? 'Close page list' : 'Change page'}
-                      title={pageMenuOpen ? 'Close' : 'Change page'}
+                      aria-label={pageMenuOpen ? 'Add page' : 'Change page'}
+                      title={pageMenuOpen ? 'Add page' : 'Change page'}
                     >
-                      {pageMenuOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      {pageMenuOpen ? <Plus size={14} /> : <ChevronDown size={14} />}
                     </button>
-                    {pageMenuOpen && (
-                      <button
-                        className="btn-ghost !p-1 relative z-20"
-                        onClick={() => { setPageMenuOpen(false); setNewPageOpen(true); }}
-                        aria-label="Add page"
-                        title="Add page"
-                      >
-                        <Plus size={14} />
-                      </button>
-                    )}
                     {pageMenuOpen && (
                       <>
                         <div className="fixed inset-0 z-10" onClick={() => setPageMenuOpen(false)} />
