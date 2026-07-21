@@ -49,27 +49,3 @@ export default function App() {
     />
   );
 }
-{/* --- DONATE BUTTON --- */}
-<div style={{ padding: '20px 0', textAlign: 'center', marginTop: 'auto' }}>
-  <a 
-    href="https://paypal.me/JesulemAdamEbol" 
-    target="_blank" 
-    rel="noopener noreferrer"
-    style={{ textDecoration: 'none' }}
-  >
-    <button style={{
-      backgroundColor: '#8a2be2',
-      color: '#ffffff',
-      border: 'none',
-      padding: '12px 30px',
-      fontSize: '16px',
-      fontWeight: 'bold',
-      borderRadius: '25px',
-      cursor: 'pointer',
-      textTransform: 'uppercase',
-      boxShadow: '0 0 15px 5px rgba(138, 43, 226, 0.6)',
-    }}>
-      Donate !
-    </button>
-  </a>
-</div>
