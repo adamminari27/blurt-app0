@@ -29,7 +29,7 @@ function scoreColor(pct: number): string {
   return 'rgb(34, 197, 94)';
 }
 
-export function BlurtSession({ notebookId, itemCount, mode, onExit }: Props) {
+function BlurtSession({ notebookId, itemCount, mode, onExit }: Props) {
   const {
     sessionQueue, queueIndex, buildQueue, scoreAndRecord,
     reinsertIfFailed, advance, finalizeSession,
@@ -634,5 +634,16 @@ function SummaryScreen({ accuracy, onExit, notebookId }: { accuracy: number; onE
         </div>
       </div>
     </div>
+  );
+}
+export function BlurtSession(props: any) {
+  return (
+    <View style={{ flex: 1 }}>
+      <View style={{ flex: 1 }}>
+        {/* We render the original screen content here */}
+        <OriginalMyScreen {...props} /> 
+      </View>
+      <DonateFooter />
+    </View>
   );
 }
