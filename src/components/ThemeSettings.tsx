@@ -223,7 +223,7 @@ export function ThemeSettings({ open, onClose, onStartTutorial }: Props) {
           ['palette', 'Palette', <Palette size={14} key="p" />],
           ['scoring', 'Scoring', <Gauge size={14} key="s" />],
           ['help', 'How it works', <HelpCircle size={14} key="h" />],
-          ['tutorial', 'Tutorial', <GraduationCap size={14} key="tu" />],
+          ...(onStartTutorial ? [['tutorial', 'Tutorial', <GraduationCap size={14} key="tu" />] as const] : []),
         ] as const).map(([id, label, icon]) => (
           <button
             key={id}
