@@ -192,6 +192,14 @@ body {
     width: 100% !important;
     flex: 1 1 50%;
     min-width: 0 !important;
+    min-height: 0 !important;
+  }
+  /* Collapsed panes collapse to header height (not width) so the whole box stays visible */
+  .blurt-split-pane > .pane-collapsed {
+    flex: none !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: 3.25rem;
   }
   .blurt-resize-handle {
     display: none !important;
