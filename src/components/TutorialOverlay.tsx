@@ -81,17 +81,29 @@ export function TutorialOverlay({ steps, onClose, onComplete }: Props) {
   const prev = () => setStep((s) => Math.max(0, s - 1));
 
   return (
-    <div className="fixed inset-0 z-[100] pointer-events-auto" style={{ animation: 'fadeIn 0.2s ease' }}>
-      {/* Backdrop with spotlight hole via 4 divs */}
-      <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.55)' }} onClick={onClose} />
+    <div className="fixed inset-0 z-[100]" style={{ animation: 'fadeIn 0.2s ease' }}>
+      {/* Backdrop with spotlight hole via clip-path so clicks pass through the hole */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: 'rgba(0,0,0,0.55)',
+          clipPath: spotlight
+            ? `polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 0, ${spotlight.left}px ${spotlight.top}px, ${spotlight.left}px ${spotlight.top + spotlight.height}px, ${spotlight.left + spotlight.width}px ${spotlight.top + spotlight.height}px, ${spotlight.left + spotlight.width}px ${spotlight.top}px, ${spotlight.left}px ${spotlight.top}px)`
+            : undefined,
+        }}
+        onClick={onClose}
+      />
       {spotlight && (
         <>
-          <div className="absolute" style={{ left: 0, top: 0, width: spotlight.left, height: spotlight.top, background: 'rgba(0,0,0,0.55)' }} />
-          <div className="absolute" style={{ left: spotlight.left + spotlight.width, top: 0, right: 0, height: spotlight.top, background: 'rgba(0,0,0,0.55)' }} />
-          <div className="absolute" style={{ left: 0, top: spotlight.top, width: spotlight.left, height: spotlight.top + spotlight.height, background: 'rgba(0,0,0,0.55)' }} />
-          <div className="absolute" style={{ left: spotlight.left + spotlight.width, top: spotlight.top, right: 0, bottom: 0, background: 'rgba(0,0,0,0.55)' }} />
-          <div className="absolute" style={{ left: 0, top: spotlight.top + spotlight.height, width: spotlight.left + spotlight.width, bottom: 0, background: 'rgba(0,0,0,0.55)' }} />
-          <div className="absolute" style={{ left: 0, top: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.55)', clipPath: `polygon(0 0, 100% 0, 100% 100%, 0 100%, 0 0, ${spotlight.left}px ${spotlight.top}px, ${spotlight.left}px ${spotlight.top + spotlight.height}px, ${spotlight.left + spotlight.width}px ${spotlight.top + spotlight.height}px, ${spotlight.left + spotlight.width}px ${spotlight.top}px, ${spotlight.left}px ${spotlight.top}px)` }} />
+          {/* Click-catcher: intercepts clicks on the highlighted element and advances the tutorial */}
+          <div
+            className="absolute cursor-pointer"
+            style={{
+              left: spotlight.left, top: spotlight.top, width: spotlight.width, height: spotlight.height,
+              zIndex: 1,
+            }}
+            onClick={(e) => { e.stopPropagation(); next(); }}
+          />
           {/* Highlighted border ring */}
           <div
             className="absolute rounded-lg pointer-events-none"
