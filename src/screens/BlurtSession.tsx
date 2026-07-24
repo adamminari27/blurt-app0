@@ -615,6 +615,10 @@ function DrawingField({
 function SummaryScreen({ accuracy, onExit, notebookId }: { accuracy: number; onExit: () => void; notebookId: string }) {
   useEffect(() => {
     void notebookId;
+    try {
+      // @ts-expect-error - AdSense injects this global
+      (window.adsbygoogle = window.adsbygoogle || []).push({});
+    } catch { /* ad blocker or not loaded */ }
   }, [notebookId]);
 
   return (
