@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNotebooks } from '../hooks/useStorage';
 import { db } from '../db/database';
 import type { Notebook, Page } from '../db/types';
 import { Modal, ConfirmDialog } from '../components/Modal';
 import { ThemeSettings } from '../components/ThemeSettings';
 import { getGlobalStreak } from '../hooks/useBlurt';
+import { exportNotebook, importNotebook, type ImportResult } from '../utils/notebookIO';
 import {
   BookOpen, Plus, Trash2, Pencil, BookMarked, ArrowRight, Flame, Settings as SettingsIcon, Clock,
+  Download, Upload, ChevronDown, FileUp, FilePlus,
 } from 'lucide-react';
 
 function formatRelativeTime(ts: number): string {
@@ -38,10 +40,48 @@ export function NotebookList({ onOpen }: Props) {
   const [themeOpen, setThemeOpen] = useState(false);
   const [stats, setStats] = useState<Record<string, { pages: number; mastery: number; lastUsed: number }>>({});
   const [streak, setStreak] = useState(0);
+  const [newMenuOpen, setNewMenuOpen] = useState(false);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [exportingId, setExportingId] = useState<string | null>(null);
+  const newMenuRef = useRef<HTMLDivElement>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     getGlobalStreak().then((s) => setStreak(s.streak));
   }, []);
+
+  useEffect(() => {
+    if (!newMenuOpen) return;
+    const onClick = (e: MouseEvent) => {
+      if (newMenuRef.current && !newMenuRef.current.contains(e.target as Node)) setNewMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onClick);
+    return () => document.removeEventListener('mousedown', onClick);
+  }, [newMenuOpen]);
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const result = await importNotebook(file);
+      await refresh();
+      setImportResult(result);
+    } catch (err: any) {
+      setImportError(err?.message || 'Failed to import notebook.');
+    }
+  };
+
+  const handleExport = async (id: string) => {
+    setExportingId(id);
+    try {
+      await exportNotebook(id);
+    } catch (err: any) {
+      setImportError(err?.message || 'Failed to export notebook.');
+    }
+    setExportingId(null);
+  };
 
   useEffect(() => {
     (async () => {
@@ -88,9 +128,30 @@ export function NotebookList({ onOpen }: Props) {
                 <Flame size={14} /> {streak} day{streak !== 1 ? 's' : ''}
               </span>
             )}
-            <button className="btn-primary" onClick={() => setCreating(true)}>
-              <Plus size={16} /> New notebook
-            </button>
+            <div className="relative" ref={newMenuRef}>
+              <button className="btn-primary" onClick={() => setNewMenuOpen((v) => !v)}>
+                <Plus size={16} /> New notebook <ChevronDown size={14} className="opacity-70" />
+              </button>
+              {newMenuOpen && (
+                <div className="absolute right-0 mt-2 w-56 surface shadow-xl z-20 animate-pop overflow-hidden" style={{ borderColor: 'var(--border-soft)' }}>
+                  <button
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-left hover:bg-[var(--accent-soft)] transition"
+                    style={{ color: 'var(--text-1)' }}
+                    onClick={() => { setNewMenuOpen(false); setCreating(true); }}
+                  >
+                    <FilePlus size={16} style={{ color: 'var(--accent)' }} /> Start from scratch
+                  </button>
+                  <button
+                    className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-left hover:bg-[var(--accent-soft)] transition"
+                    style={{ color: 'var(--text-1)' }}
+                    onClick={() => { setNewMenuOpen(false); importInputRef.current?.click(); }}
+                  >
+                    <FileUp size={16} style={{ color: 'var(--accent)' }} /> Import notebook
+                  </button>
+                </div>
+              )}
+            </div>
+            <input ref={importInputRef} type="file" accept=".json,.blurt.json,application/json" onChange={handleImportFile} className="hidden" />
           </div>
         </header>
 
@@ -110,6 +171,7 @@ export function NotebookList({ onOpen }: Props) {
                       <h3 className="font-semibold truncate" style={{ color: 'var(--text-0)' }}>{nb.name}</h3>
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                      <button className="btn-ghost !p-1.5" onClick={(e) => { e.stopPropagation(); handleExport(nb.id); }} aria-label="Export" disabled={exportingId === nb.id} title="Export notebook"><Download size={14} /></button>
                       <button className="btn-ghost !p-1.5" onClick={(e) => { e.stopPropagation(); setRenaming(nb); setRenameVal(nb.name); }} aria-label="Rename"><Pencil size={14} /></button>
                       <button className="btn-ghost !p-1.5" onClick={(e) => { e.stopPropagation(); setDeleting(nb); }} aria-label="Delete"><Trash2 size={14} /></button>
                     </div>
@@ -147,6 +209,16 @@ export function NotebookList({ onOpen }: Props) {
       </Modal>
 
       <ConfirmDialog open={!!deleting} title="Delete notebook?" message={`"${deleting?.name}" and all its pages, sources, and history will be permanently removed.`} onConfirm={async () => { if (deleting) await deleteNotebook(deleting.id); setDeleting(null); }} onCancel={() => setDeleting(null)} />
+
+      <Modal open={!!importResult} onClose={() => setImportResult(null)} title="Notebook imported" footer={<button className="btn-primary" onClick={() => setImportResult(null)}>Done</button>}>
+        <p className="text-sm" style={{ color: 'var(--text-2)' }}>
+          "{importResult?.name}" was imported with {importResult?.pages} page{(importResult?.pages || 0) !== 1 ? 's' : ''} and {importResult?.sources} source file{(importResult?.sources || 0) !== 1 ? 's' : ''}.
+        </p>
+      </Modal>
+
+      <Modal open={!!importError} onClose={() => setImportError(null)} title="Import failed" footer={<button className="btn-primary" onClick={() => setImportError(null)}>Dismiss</button>}>
+        <p className="text-sm" style={{ color: 'var(--error)' }}>{importError}</p>
+      </Modal>
 
       <ThemeSettings open={themeOpen} onClose={() => setThemeOpen(false)} />
     </div>

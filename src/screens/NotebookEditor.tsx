@@ -13,7 +13,6 @@ import {
   Zap, Layers, Settings as SettingsIcon, ChevronDown, ChevronUp, Maximize2,
 } from 'lucide-react';
 import { ThemeSettings } from '../components/ThemeSettings';
-import { TutorialOverlay, type TutorialStep } from '../components/TutorialOverlay';
 import { distributeItems, type SessionMode } from '../engine/ntd';
 
 interface Props {
@@ -46,7 +45,6 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
   const [blurtMode, setBlurtMode] = useState<SessionMode>('active');
   const [blurtPreview, setBlurtPreview] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
-  const [tutorialOpen, setTutorialOpen] = useState(false);
   const [confirmDelPage, setConfirmDelPage] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -100,42 +98,18 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
     onStartBlurt(blurtItemCount, blurtMode);
   };
 
-  const startTutorial = () => {
-    setThemeOpen(false);
-    setTutorialOpen(true);
-  };
-
-  const tutorialSteps: TutorialStep[] = [
-    { title: "Welcome to Blurt", body: "Blurt is an active-recall study tool. You recreate source material from memory, then get scored automatically. Let's walk through everything you can do here.", placement: "center" },
-    { target: "back-btn", title: "Back to notebooks", body: "Tap here to return to your notebook list at any time.", placement: "bottom" },
-    { target: "notebook-name", title: "Your notebook", body: "This is the notebook you're studying. The badge shows how many pages it contains.", placement: "bottom" },
-    { target: "settings-btn", title: "Settings", body: "Open settings to change themes, palettes, scoring mode, read how it works, or restart this tutorial.", placement: "bottom" },
-    { target: "blurt-btn", title: "Blurt mode", body: "This is the heart of Blurt. It blanks out all your pages and asks you to recreate them from memory, then scores you automatically. You can choose session mode and item count before starting.", placement: "bottom" },
-    { target: "source-pane", title: "Source panel", body: "This panel shows your study material — PDFs, DOCX, text files, markdown, or images. Drop files here or use the + button to upload. Select a source to view it while you work.", placement: "right" },
-    { target: "source-dropdown", title: "Switch sources", body: "Tap the chevron to see all uploaded sources and switch between them. You can have multiple sources per notebook.", placement: "bottom" },
-    { target: "source-add", title: "Add a source", body: "Tap + to upload new files. Supported formats: PDF, DOCX, TXT, MD, and images.", placement: "bottom" },
-    { target: "source-collapse", title: "Collapse the source panel", body: "Need more room for your notebook? Tap here to collapse the source panel and focus on writing.", placement: "bottom" },
-    { target: "notebook-pane", title: "Notebook panel", body: "This is where you build pages from memory. Each page holds one type of content — plain text, tables, equations, bullet lists, flashcards, or drawings.", placement: "left" },
-    { target: "page-dropdown", title: "Switch pages", body: "Tap the chevron to list all pages in this notebook. You can tap a page name to rename it inline, or tap the trash icon to delete it.", placement: "bottom" },
-    { target: "page-add", title: "Add a page", body: "Tap + to create a new page. You'll choose a title and a content type — each page is locked to one type so your study material stays organized.", placement: "bottom" },
-    { target: "template-add", title: "Add content blocks", body: "Each page can hold multiple blocks of the same type. Tap here to add another block to the current page.", placement: "bottom" },
-    { target: "notebook-collapse", title: "Collapse the notebook panel", body: "Tap here to collapse the notebook panel if you want to focus on reading the source.", placement: "bottom" },
-    { target: "blurt-btn", title: "Ready to study!", body: "When you've built some pages, tap Blurt mode to test yourself. The adaptive scheduler tracks your memory strength and surfaces pages right when you're about to forget them. That's the whole workflow — upload sources, build pages, then Blurt to lock it in.", placement: "top" },
-  ];
-
   return (
     <div className="h-screen flex flex-col" style={{ background: 'var(--bg-0)' }}>
       <header className="flex items-center gap-2 px-3 py-2.5 border-b" style={{ borderColor: 'var(--border-soft)', background: 'var(--bg-1)' }}>
-        <button className="btn-ghost !p-1.5" data-tutorial="back-btn" onClick={onBack} aria-label="Back"><ArrowLeft size={18} /></button>
-        <h1 className="font-semibold truncate" data-tutorial="notebook-name" style={{ color: 'var(--text-0)' }}>{notebookName}</h1>
+        <button className="btn-ghost !p-1.5" onClick={onBack} aria-label="Back"><ArrowLeft size={18} /></button>
+        <h1 className="font-semibold truncate" style={{ color: 'var(--text-0)' }}>{notebookName}</h1>
         <span className="chip ml-1" style={{ background: 'var(--bg-2)', color: 'var(--text-3)' }}>{pages.length} pages</span>
         <div className="ml-auto flex items-center gap-1.5">
-          <button className="btn-ghost !p-1.5" data-tutorial="settings-btn" onClick={() => setThemeOpen(true)} title="Settings" aria-label="Settings">
+          <button className="btn-ghost !p-1.5" onClick={() => setThemeOpen(true)} title="Settings" aria-label="Settings">
             <SettingsIcon size={16} />
           </button>
           <button
             className="btn-primary !py-1.5 !px-3 text-xs"
-            data-tutorial="blurt-btn"
             onClick={() => setBlurtOpen(true)}
             disabled={pages.length === 0}
           >
@@ -154,7 +128,6 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
           <main className="blurt-split-pane flex h-full overflow-hidden">
             <div
               className={`blurt-source-pane surface m-2 overflow-hidden flex flex-col min-w-0 ${sourcePaneCollapsed ? 'flex-none w-14 pane-collapsed' : 'flex-1'}`}
-              data-tutorial="source-pane"
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
               onDragLeave={() => setDragOver(false)}
               onDrop={onDrop}
@@ -170,7 +143,6 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
                     )}
                     <button
                       className="btn-ghost !p-1 shrink-0"
-                      data-tutorial="source-dropdown"
                       onClick={() => setSourceMenuOpen((o) => !o)}
                       aria-label={sourceMenuOpen ? 'Close source list' : 'Change source'}
                       title={sourceMenuOpen ? 'Close' : 'Change source'}
@@ -179,7 +151,6 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
                     </button>
                     <button
                       className="btn-ghost !p-1 shrink-0"
-                      data-tutorial="source-add"
                       onClick={() => fileInput.current?.click()}
                       aria-label="Add source"
                       title="Add source"
@@ -241,7 +212,6 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
                 <div className="flex items-center gap-1.5 ml-auto">
                   <button
                     className="btn-ghost !p-1"
-                    data-tutorial="source-collapse"
                     onClick={() => setSourcePaneCollapsed((c) => !c)}
                     aria-label={sourcePaneCollapsed ? 'Expand source pane' : 'Collapse source pane'}
                     title={sourcePaneCollapsed ? 'Expand' : 'Collapse'}
@@ -264,7 +234,7 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
                 )
               )}
             </div>
-            <div className={`blurt-notebook-pane surface m-2 overflow-hidden flex flex-col min-w-0 ${notebookPaneCollapsed ? 'flex-none w-14 pane-collapsed' : 'flex-1'}`} data-tutorial="notebook-pane">
+            <div className={`blurt-notebook-pane surface m-2 overflow-hidden flex flex-col min-w-0 ${notebookPaneCollapsed ? 'flex-none w-14 pane-collapsed' : 'flex-1'}`}>
               <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b" style={{ borderColor: 'var(--border-soft)' }}>
                 {!notebookPaneCollapsed && (
                   <div className="relative flex items-center gap-1.5 min-w-0">
@@ -294,7 +264,6 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
                     )}
                     <button
                       className="btn-ghost !p-1 shrink-0"
-                      data-tutorial="page-dropdown"
                       onClick={() => {
                         setEditingTitle(false);
                         setPageMenuOpen((o) => !o);
@@ -306,7 +275,6 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
                     </button>
                     <button
                       className="btn-ghost !p-1 shrink-0"
-                      data-tutorial="page-add"
                       onClick={() => { setEditingTitle(false); setPageMenuOpen(false); setNewPageOpen(true); }}
                       aria-label="Add page"
                       title="Add page"
@@ -367,13 +335,12 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
                 )}
                 <div className="flex items-center gap-1.5 ml-auto">
                   {!notebookPaneCollapsed && activePage && (
-                    <button className="btn-subtle !py-1.5 !px-2.5 text-xs" data-tutorial="template-add" onClick={() => handleAddTemplate(activePage.templateType)}>
+                    <button className="btn-subtle !py-1.5 !px-2.5 text-xs" onClick={() => handleAddTemplate(activePage.templateType)}>
                       <Plus size={14} /> Add {defaultTitleFor(activePage.templateType)}
                     </button>
                   )}
                   <button
                     className="btn-ghost !p-1"
-                    data-tutorial="notebook-collapse"
                     onClick={() => setNotebookPaneCollapsed((c) => !c)}
                     aria-label={notebookPaneCollapsed ? 'Expand notebook pane' : 'Collapse notebook pane'}
                     title={notebookPaneCollapsed ? 'Expand' : 'Collapse'}
@@ -550,15 +517,7 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
         </div>
       </Modal>
 
-      <ThemeSettings open={themeOpen} onClose={() => setThemeOpen(false)} onStartTutorial={startTutorial} />
-
-      {tutorialOpen && (
-        <TutorialOverlay
-          steps={tutorialSteps}
-          onClose={() => setTutorialOpen(false)}
-          onComplete={() => setTutorialOpen(false)}
-        />
-      )}
+      <ThemeSettings open={themeOpen} onClose={() => setThemeOpen(false)} />
 
       <ConfirmDialog
         open={!!confirmDelPage}
