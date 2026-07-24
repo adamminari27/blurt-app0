@@ -9,7 +9,7 @@ import { ResizablePanes, type PaneState } from '../components/ResizablePanes';
 import { Modal, ConfirmDialog } from '../components/Modal';
 import {
   ArrowLeft, Plus, Minus, FileText, Trash2,
-  Zap, Layers, Settings as SettingsIcon, ChevronDown, Maximize2,
+  Zap, Layers, Settings as SettingsIcon, ChevronDown, ChevronUp, Maximize2,
 } from 'lucide-react';
 import { ThemeSettings } from '../components/ThemeSettings';
 import { distributeItems, type SessionMode } from '../engine/ntd';
@@ -115,28 +115,29 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
               onDrop={onDrop}
               style={dragOver ? { borderColor: 'var(--accent)' } : undefined}
             >
-              <div className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: 'var(--border-soft)' }}>
+              <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b" style={{ borderColor: 'var(--border-soft)' }}>
                 {!sourcePaneCollapsed && (
                   <div className="relative flex items-center gap-1.5 min-w-0">
                     {activeSource ? (
-                      <span className="font-semibold truncate" style={{ color: 'var(--text-0)' }}>{activeSource.name}</span>
+                      <span className="font-semibold" style={{ color: 'var(--text-0)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activeSource.name}</span>
                     ) : (
-                      <span className="font-semibold truncate" style={{ color: 'var(--text-0)' }}>Select a source</span>
+                      <span className="font-semibold" style={{ color: 'var(--text-0)' }}>Select a source</span>
                     )}
                     <button
-                      className="btn-ghost !p-1"
-                      onClick={() => {
-                        if (sourceMenuOpen) {
-                          setSourceMenuOpen(false);
-                          fileInput.current?.click();
-                        } else {
-                          setSourceMenuOpen(true);
-                        }
-                      }}
-                      aria-label={sourceMenuOpen ? 'Add source' : 'Change source'}
-                      title={sourceMenuOpen ? 'Add source' : 'Change source'}
+                      className="btn-ghost !p-1 shrink-0"
+                      onClick={() => setSourceMenuOpen((o) => !o)}
+                      aria-label={sourceMenuOpen ? 'Close source list' : 'Change source'}
+                      title={sourceMenuOpen ? 'Close' : 'Change source'}
                     >
-                      {sourceMenuOpen ? <Plus size={14} /> : <ChevronDown size={14} />}
+                      {sourceMenuOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
+                    <button
+                      className="btn-ghost !p-1 shrink-0"
+                      onClick={() => fileInput.current?.click()}
+                      aria-label="Add source"
+                      title="Add source"
+                    >
+                      <Plus size={14} />
                     </button>
                     <input ref={fileInput} type="file" multiple className="hidden" onChange={(e) => e.target.files && handleFiles(e.target.files)} />
                     {sourceMenuOpen && (
@@ -197,24 +198,24 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
               )}
             </div>
             <div className={`blurt-notebook-pane surface m-2 overflow-hidden flex flex-col min-w-0 ${notebookPaneCollapsed ? 'flex-none w-14 pane-collapsed' : 'flex-1'}`}>
-              <div className="flex items-center justify-between px-4 py-2.5 border-b" style={{ borderColor: 'var(--border-soft)' }}>
+              <div className="flex items-center justify-between gap-2 px-4 py-2.5 border-b" style={{ borderColor: 'var(--border-soft)' }}>
                 {!notebookPaneCollapsed && (
                   <div className="relative flex items-center gap-1.5 min-w-0">
                     {activePage ? (
                       editingTitle ? (
                         <input
                           className="input !bg-transparent !border-transparent !px-1 font-semibold"
-                          style={{ color: 'var(--text-0)' }}
+                          style={{ color: 'var(--text-0)', maxWidth: '200px' }}
                           autoFocus
                           value={activePage.title}
-                          onChange={(e) => updatePage(activePage.id, { title: e.target.value })}
+                          onChange={(e) => updatePage(activePage.id, { title: e.target.value.slice(0, 200) })}
                           onBlur={() => setEditingTitle(false)}
                           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') (e.target as HTMLInputElement).blur(); }}
                         />
                       ) : (
                         <span
-                          className="font-semibold truncate cursor-text"
-                          style={{ color: 'var(--text-0)' }}
+                          className="font-semibold cursor-text"
+                          style={{ color: 'var(--text-0)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                           onClick={() => setEditingTitle(true)}
                           title="Click to rename"
                         >
@@ -222,23 +223,26 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
                         </span>
                       )
                     ) : (
-                      <span className="font-semibold truncate" style={{ color: 'var(--text-0)' }}>Select a page</span>
+                      <span className="font-semibold" style={{ color: 'var(--text-0)' }}>Select a page</span>
                     )}
                     <button
-                      className="btn-ghost !p-1"
+                      className="btn-ghost !p-1 shrink-0"
                       onClick={() => {
                         setEditingTitle(false);
-                        if (pageMenuOpen) {
-                          setPageMenuOpen(false);
-                          setNewPageOpen(true);
-                        } else {
-                          setPageMenuOpen(true);
-                        }
+                        setPageMenuOpen((o) => !o);
                       }}
-                      aria-label={pageMenuOpen ? 'Add page' : 'Change page'}
-                      title={pageMenuOpen ? 'Add page' : 'Change page'}
+                      aria-label={pageMenuOpen ? 'Close page list' : 'Change page'}
+                      title={pageMenuOpen ? 'Close' : 'Change page'}
                     >
-                      {pageMenuOpen ? <Plus size={14} /> : <ChevronDown size={14} />}
+                      {pageMenuOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
+                    <button
+                      className="btn-ghost !p-1 shrink-0"
+                      onClick={() => { setEditingTitle(false); setPageMenuOpen(false); setNewPageOpen(true); }}
+                      aria-label="Add page"
+                      title="Add page"
+                    >
+                      <Plus size={14} />
                     </button>
                     {pageMenuOpen && (
                       <>
@@ -340,7 +344,7 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
         <div className="space-y-3">
           <div>
             <label className="label block mb-1.5">Page title</label>
-            <input className="input" autoFocus placeholder={`Page ${pages.length + 1}`} value={newPageTitle} onChange={(e) => setNewPageTitle(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleCreatePage()} />
+            <input className="input" autoFocus placeholder={`Page ${pages.length + 1}`} value={newPageTitle} onChange={(e) => setNewPageTitle(e.target.value.slice(0, 200))} onKeyDown={(e) => e.key === 'Enter' && handleCreatePage()} />
           </div>
           <div>
             <label className="label block mb-1.5">Page type (one type per page)</label>
