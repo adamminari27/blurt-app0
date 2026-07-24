@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Palette, RotateCcw, Check, Sun, Moon, HelpCircle, Settings as SettingsIcon, Gauge } from 'lucide-react';
+import { Palette, RotateCcw, Check, Sun, Moon, HelpCircle, Settings as SettingsIcon, Gauge, GraduationCap } from 'lucide-react';
 import { Modal } from './Modal';
 import { useTheme, type PalettePreset, type ThemeName } from '../hooks/useTheme';
 import { getScoringMode, setScoringMode, type ScoringMode } from '../hooks/useScoringMode';
@@ -155,14 +155,15 @@ const SLOTS: { key: keyof Palette; label: string }[] = [
 
 // ---------- Component ----------
 
-type Tab = 'theme' | 'palette' | 'scoring' | 'help';
+type Tab = 'theme' | 'palette' | 'scoring' | 'help' | 'tutorial';
 
 interface Props {
   open: boolean;
   onClose: () => void;
+  onStartTutorial?: () => void;
 }
 
-export function ThemeSettings({ open, onClose }: Props) {
+export function ThemeSettings({ open, onClose, onStartTutorial }: Props) {
   const { theme, toggle, set, preset, setPreset } = useTheme();
   const [tab, setTab] = useState<Tab>('theme');
   const [palette, setPalette] = useState<Palette>(() => {
@@ -222,6 +223,7 @@ export function ThemeSettings({ open, onClose }: Props) {
           ['palette', 'Palette', <Palette size={14} key="p" />],
           ['scoring', 'Scoring', <Gauge size={14} key="s" />],
           ['help', 'How it works', <HelpCircle size={14} key="h" />],
+          ['tutorial', 'Tutorial', <GraduationCap size={14} key="tu" />],
         ] as const).map(([id, label, icon]) => (
           <button
             key={id}
@@ -369,7 +371,25 @@ export function ThemeSettings({ open, onClose }: Props) {
       )}
 
       {/* Help tab */}
-      {tab === 'help' && <HowItWorksContent />}    </Modal>
+      {tab === 'help' && <HowItWorksContent />}
+
+      {/* Tutorial tab */}
+      {tab === 'tutorial' && (
+        <div className="space-y-4 text-sm" style={{ color: 'var(--text-1)' }}>
+          <Section title="Interactive tutorial">
+            Launch a step-by-step, interactive walkthrough that highlights each button and feature on the editor screen. You'll learn how to upload sources, build pages, use Blurt mode, and navigate the app — all with on-screen pointers and numbered steps.
+          </Section>
+          <div className="flex justify-center pt-2">
+            <button className="btn-primary" onClick={() => onStartTutorial?.()}>
+              <GraduationCap size={16} /> Start tutorial
+            </button>
+          </div>
+          <p className="text-center text-xs" style={{ color: 'var(--text-3)' }}>
+            The tutorial will close this settings window and guide you through the editor.
+          </p>
+        </div>
+      )}
+    </Modal>
   );
 }
 
