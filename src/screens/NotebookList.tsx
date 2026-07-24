@@ -31,7 +31,7 @@ interface Props {
 }
 
 export function NotebookList({ onOpen }: Props) {
-  const { notebooks, loading, createNotebook, renameNotebook, deleteNotebook } = useNotebooks();
+  const { notebooks, loading, createNotebook, renameNotebook, deleteNotebook, refresh } = useNotebooks();
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
   const [renaming, setRenaming] = useState<Notebook | null>(null);
