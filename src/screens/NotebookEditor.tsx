@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { usePages, useSources } from '../hooks/useStorage';
+import { db } from '../db/database';
 import { buildSource } from '../engine/sourceIngest';
 import { createTemplate, defaultTitleFor } from '../engine/templateFactory';
 import type { TemplateType } from '../db/types';
@@ -23,7 +24,7 @@ interface Props {
 
 export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt }: Props) {
   const { pages, createPage, updatePage, deletePage, addTemplate, updateTemplate, deleteTemplate } = usePages(notebookId);
-  const { sources, addSource, deleteSource } = useSources(notebookId);
+  const { sources, addSource, deleteSource, refresh: refreshSources } = useSources(notebookId);
   const [activePageId, setActivePageId] = useState<string | null>(null);
   const [activeSourceId, setActiveSourceId] = useState<string | null>(null);
   const [rightPane, setRightPane] = useState<PaneState>({ width: 320, visible: false });
@@ -35,6 +36,10 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
   const [pageMenuOpen, setPageMenuOpen] = useState(false);
   const [sourceMenuOpen, setSourceMenuOpen] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
+  const [editingSourceId, setEditingSourceId] = useState<string | null>(null);
+  const [editingSourceName, setEditingSourceName] = useState('');
+  const [editingPageId, setEditingPageId] = useState<string | null>(null);
+  const [editingPageTitle, setEditingPageTitle] = useState('');
   const [blurtOpen, setBlurtOpen] = useState(false);
   const [blurtItemCount, setBlurtItemCount] = useState(15);
   const [blurtMode, setBlurtMode] = useState<SessionMode>('active');
@@ -53,6 +58,19 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
     setNewPageTitle('');
     setNewPageOpen(false);
     setActivePageId(page?.id || null);
+  };
+
+  const commitSourceRename = async (id: string, fallback: string) => {
+    const name = editingSourceName.trim() || fallback;
+    await db.sources.update(id, { name: name.slice(0, 200) });
+    setEditingSourceId(null);
+    await refreshSources();
+  };
+
+  const commitPageRename = async (id: string, fallback: string) => {
+    const title = editingPageTitle.trim() || fallback;
+    await updatePage(id, { title: title.slice(0, 200) });
+    setEditingPageId(null);
   };
 
   const handleFiles = async (files: FileList) => {
@@ -153,10 +171,29 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
                               className={`group flex items-center gap-1.5 px-3 py-2 cursor-pointer transition ${activeSourceId === s.id ? 'bg-amber-500/10' : 'hover:bg-slate-800'}`}
                               onClick={() => { setActiveSourceId(s.id); setSourceMenuOpen(false); }}
                             >
-                              <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded" style={{ background: 'var(--bg-2)', color: 'var(--text-3)' }}>{s.kind}</span>
-                              <span className="text-sm truncate flex-1" style={{ color: activeSourceId === s.id ? 'var(--text-0)' : 'var(--text-1)' }}>{s.name}</span>
+                              <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded shrink-0" style={{ background: 'var(--bg-2)', color: 'var(--text-3)' }}>{s.kind}</span>
+                              {editingSourceId === s.id ? (
+                                <input
+                                  className="input !py-0.5 !px-1 text-sm flex-1 min-w-0"
+                                  autoFocus
+                                  value={editingSourceName}
+                                  onChange={(e) => setEditingSourceName(e.target.value.slice(0, 200))}
+                                  onClick={(e) => e.stopPropagation()}
+                                  onBlur={() => commitSourceRename(s.id, s.name)}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') { setEditingSourceId(null); } }}
+                                />
+                              ) : (
+                                <span
+                                  className="text-sm truncate flex-1 cursor-text"
+                                  style={{ color: activeSourceId === s.id ? 'var(--text-0)' : 'var(--text-1)' }}
+                                  onClick={(e) => { e.stopPropagation(); setEditingSourceId(s.id); setEditingSourceName(s.name); }}
+                                  title="Tap to rename"
+                                >
+                                  {s.name}
+                                </span>
+                              )}
                               <button
-                                className="btn-ghost !p-0.5 opacity-0 group-hover:opacity-100"
+                                className="btn-ghost !p-0.5 opacity-0 group-hover:opacity-100 shrink-0"
                                 onClick={(e) => { e.stopPropagation(); setSourceMenuOpen(false); deleteSource(s.id); if (activeSourceId === s.id) setActiveSourceId(null); }}
                                 aria-label="Delete source"
                               >
@@ -257,11 +294,30 @@ export function NotebookEditor({ notebookId, notebookName, onBack, onStartBlurt 
                               className={`group flex items-center gap-1.5 px-3 py-2 cursor-pointer transition ${activePageId === p.id ? 'bg-amber-500/10' : 'hover:bg-slate-800'}`}
                               onClick={() => { setActivePageId(p.id); setPageMenuOpen(false); }}
                             >
-                              <FileText size={14} style={{ color: activePageId === p.id ? 'var(--accent)' : 'var(--text-3)' }} />
-                              <span className="text-sm truncate flex-1" style={{ color: activePageId === p.id ? 'var(--text-0)' : 'var(--text-1)' }}>{p.title}</span>
-                              <span className="text-[10px] uppercase" style={{ color: 'var(--text-3)' }}>{p.templateType}</span>
+                              <FileText size={14} className="shrink-0" style={{ color: activePageId === p.id ? 'var(--accent)' : 'var(--text-3)' }} />
+                              {editingPageId === p.id ? (
+                                <input
+                                  className="input !py-0.5 !px-1 text-sm flex-1 min-w-0"
+                                  autoFocus
+                                  value={editingPageTitle}
+                                  onChange={(e) => setEditingPageTitle(e.target.value.slice(0, 200))}
+                                  onClick={(e) => e.stopPropagation()}
+                                  onBlur={() => commitPageRename(p.id, p.title)}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') { setEditingPageId(null); } }}
+                                />
+                              ) : (
+                                <span
+                                  className="text-sm truncate flex-1 cursor-text"
+                                  style={{ color: activePageId === p.id ? 'var(--text-0)' : 'var(--text-1)' }}
+                                  onClick={(e) => { e.stopPropagation(); setEditingPageId(p.id); setEditingPageTitle(p.title); }}
+                                  title="Tap to rename"
+                                >
+                                  {p.title}
+                                </span>
+                              )}
+                              <span className="text-[10px] uppercase shrink-0" style={{ color: 'var(--text-3)' }}>{p.templateType}</span>
                               <button
-                                className="btn-ghost !p-0.5 opacity-0 group-hover:opacity-100"
+                                className="btn-ghost !p-0.5 opacity-0 group-hover:opacity-100 shrink-0"
                                 onClick={(e) => { e.stopPropagation(); setPageMenuOpen(false); setConfirmDelPage(p.id); }}
                                 aria-label="Delete page"
                               >
